@@ -1,3 +1,4 @@
+#codigo de ejemplos
 import os, json
 
 def procesar_datos(ruta):
@@ -8,4 +9,3 @@ def procesar_datos(ruta):
         total += data[k]
     return total
 
-if

@@ -1,0 +1,9 @@
+Ejecutar venv en la raiz del proyecto
+.venv\Scripts\activate
+
+Requisitos
+Instalar Ollama y el modelo de mistral
+ollama pull mistral:7b-instruct
+
+Ejecutar Ollama en cmd
+ollama serve 
