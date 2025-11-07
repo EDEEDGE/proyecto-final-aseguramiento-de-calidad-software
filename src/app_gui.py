@@ -8,58 +8,47 @@ from analizadores.analizador_ia import sugerencias_ia
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Agente Revisor de Código")
+        self.title("Agente revisor de codigo")
         self.geometry("1000x700")
         self.minsize(900, 600)
+        self.ruta_actual = tk.StringVar(value="(No hay archivo)")
 
-        # Estado
-        self.ruta_actual = tk.StringVar(value="(ningún archivo)")
-
-        # Barra superior
         top = tk.Frame(self, padx=10, pady=10)
         top.pack(fill="x")
         tk.Label(top, text="Archivo:", font=("Segoe UI", 10, "bold")).pack(side="left")
         tk.Label(top, textvariable=self.ruta_actual, fg="#555").pack(side="left", padx=8)
         tk.Button(top, text="Seleccionar .py", command=self.seleccionar_archivo).pack(side="right")
 
-        # Panel de acciones
         actions = tk.Frame(self, padx=10, pady=6)
         actions.pack(fill="x")
         tk.Button(actions, text="Analizar con pylint", command=self.analizar).pack(side="left")
         tk.Button(actions, text="Sugerencias IA (Ollama)", command=self.recomendar).pack(side="left", padx=6)
         tk.Button(actions, text="Analizar + IA", command=self.analizar_y_recomendar).pack(side="left")
 
-        # Paneles de salida
         body = tk.PanedWindow(self, orient="vertical")
         body.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Salida Pylint
         frame_pylint = tk.LabelFrame(body, text="Resultado Pylint", padx=8, pady=8)
         self.txt_pylint = scrolledtext.ScrolledText(frame_pylint, wrap="word", font=("Consolas", 10))
         self.txt_pylint.pack(fill="both", expand=True)
         body.add(frame_pylint)
 
-        # Salida IA
         frame_ia = tk.LabelFrame(body, text="Sugerencias IA", padx=8, pady=8)
         self.txt_ia = scrolledtext.ScrolledText(frame_ia, wrap="word", font=("Consolas", 10))
         self.txt_ia.pack(fill="both", expand=True)
         body.add(frame_ia)
 
     def seleccionar_archivo(self):
-        ruta = filedialog.askopenfilename(
-            title="Seleccionar archivo Python",
-            filetypes=[("Python", "*.py")]
-        )
+        ruta = filedialog.askopenfilename(title="Seleccione archivo de python", filetypes=[("Python", "*.py")])
         if ruta:
             self.ruta_actual.set(ruta)
-            # Limpia salidas
             self.txt_pylint.delete("1.0", "end")
             self.txt_ia.delete("1.0", "end")
 
     def _verificar_ruta(self) -> str:
         ruta = self.ruta_actual.get()
-        if not ruta or ruta == "(ningún archivo)" or not os.path.exists(ruta):
-            messagebox.showerror("Error", "Selecciona primero un archivo .py")
+        if not ruta or ruta == "(ningun archivo)" or not os.path.exists(ruta):
+            messagebox.showerror("Error", "Seleccione un archivo .py")
             return ""
         return ruta
 
@@ -75,11 +64,11 @@ class App(tk.Tk):
             self.txt_pylint.insert("end", "Score: (no disponible)\n\n")
 
         if not res["mensajes"]:
-            self.txt_pylint.insert("end", "✅ Sin hallazgos importantes.\n")
+            self.txt_pylint.insert("end", "Sin hallazgos importantes\n")
         else:
-            self.txt_pylint.insert("end", "⚠ Hallazgos:\n")
+            self.txt_pylint.insert("end", "Hallazgos:\n")
             for m in res["mensajes"]:
-                self.txt_pylint.insert("end", f"- [{m['severidad']}] línea {m['linea']}: {m['detalle']}\n")
+                self.txt_pylint.insert("end", f"- [{m['severidad']}] linea {m['linea']}: {m['detalle']}\n")
 
     def recomendar(self):
         ruta = self._verificar_ruta()
@@ -92,10 +81,9 @@ class App(tk.Tk):
             return
 
         self.txt_ia.delete("1.0", "end")
-        self.txt_ia.insert("end", "Consultando IA (Ollama)...\n")
+        self.txt_ia.insert("end", "Consultando modelo Ollama...\n")
         self.update_idletasks()
-
-        resp = sugerencias_ia(codigo, modelo="codellama:7b-instruct")
+        resp = sugerencias_ia(codigo)
         self.txt_ia.delete("1.0", "end")
         self.txt_ia.insert("end", resp)
 

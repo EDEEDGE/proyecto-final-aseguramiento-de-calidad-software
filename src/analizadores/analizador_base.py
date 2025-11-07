@@ -1,52 +1,61 @@
 import subprocess
 import json
-import io
+import re
 
 def analizar_con_pylint(ruta_archivo: str) -> dict:
-    """
-    Ejecuta pylint sobre un archivo Python y devuelve:
-      - score (calificación /10)
-      - mensajes (lista de errores y advertencias)
-      - raw (salida cruda)
-    Compatible con pylint >= 3.0
-    """
     try:
-        # Ejecutar pylint en modo JSON (más fácil de parsear)
+        # Ejecutar pylint en modo JSON y texto
         resultado = subprocess.run(
-            ["pylint", "--output-format=json", "--score=y", "--reports=n", ruta_archivo],
+            ["pylint", "--output-format=json", "--score=y", ruta_archivo],
             capture_output=True,
-            text=True,
-            check=False
+            text=True
         )
     except Exception as e:
         return {"score": None, "mensajes": [], "raw": f"Error ejecutando pylint: {e}"}
 
-    salida = resultado.stdout.strip()
     mensajes = []
     score = None
 
-    # Si pylint devuelve JSON, lo parseamos
+    # Procesar salida JSON (mensajes de advertencia o error)
+    salida = resultado.stdout.strip()
     if salida.startswith("["):
         try:
             datos = json.loads(salida)
             for item in datos:
                 mensajes.append({
-                    "severidad": item.get("type", ""),
+                    "severidad": item.get("type", "").capitalize(),
                     "linea": item.get("line", 0),
                     "detalle": item.get("message", "")
                 })
         except Exception as e:
             mensajes.append({"detalle": f"Error leyendo salida JSON: {e}"})
 
-    # Buscar el score en stderr (pylint lo deja ahí)
-    for linea in resultado.stderr.splitlines():
-        if "Your code has been rated at" in linea:
-            try:
-                parte = linea.split("rated at", 1)[1].strip()
-                nota = parte.split("/")[0].strip()
-                score = float(nota)
-            except Exception:
-                pass
+    # Buscar calificación (pylint >=3 ya la envía a stderr)
+    texto_busqueda = resultado.stderr + "\n" + resultado.stdout
+    match = re.search(r"rated at ([\d\.]+)/10", texto_busqueda)
+    if match:
+        try:
+            score = float(match.group(1))
+        except Exception:
+            score = None
+
+    # Si no hay score, intentamos obtenerlo con un segundo comando (fallback)
+    if score is None:
+        try:
+            result_text = subprocess.run(
+                ["pylint", "--score=y", "--reports=y", ruta_archivo],
+                capture_output=True,
+                text=True
+            )
+            match2 = re.search(r"rated at ([\d\.]+)/10", result_text.stdout)
+            if match2:
+                score = float(match2.group(1))
+        except Exception:
+            pass
+
+    # Si pylint no devolvió mensajes
+    if not mensajes:
+        mensajes = [{"detalle": "Código limpio — sin observaciones relevantes."}]
 
     return {
         "score": score,
